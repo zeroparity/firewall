@@ -79,21 +79,27 @@ I have a few hosts in my home network that I want to route all traffic exiting m
 
 To do this in pf.conf
   * Create a table with the addresses we want to route over the VPN 
+
   ```
    table <HostsToRouteViaVPN> {192.168.0.10, 192.168.0.11, 192.168.0.12}
   ```
+
   * Inbound rules (from my home network)
+
   ```
    pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto tcp from <HostsToRouteViaVPN> to any $TcpState $OpenSTO
    pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto udp from <HostsToRouteViaVPN> to any $UdpState $OpenSTO
    pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto icmp from <HostsToRouteViaVPN> to any $IcmpPing $UdpState $OpenSTO
   ```
+
   * Outbound rules (from my firewall to the VPS)
+
   ```
   pass out log on $VpnIf inet proto tcp from ($VpnIf) to <HostsToRouteViaVPN> $TcpState
   pass out log on $VpnIf inet proto udp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState
   pass out log on $VpnIf inet proto icmp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState
   ```
+  
 I also run a squid proxy on my VPS. It's locked down so it can be accessed only from the loopback and the OpenVPN interfaces.
 
 The Bahrain gov / ISPs run a transparent proxy to filter web access. Unfortunately, this has a tendency to break some services that run over http. An example being linux package management tools (apt-get, yum).
