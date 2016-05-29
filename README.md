@@ -77,11 +77,15 @@ Some useful notes though:
 * I have a few hosts in my home network that I want to route all traffic exiting my network over the VPN. This is useful for geographically restricted services such as Amazon FireTV, Amazon Echo etc.
   * To do this in pf.conf
     * Create a table with the addresses we want to route over the VPN 
-    `table <HostsToRouteViaVPN> {192.168.0.10, 192.168.0.11, 192.168.0.12}`
+    ```
+      table <HostsToRouteViaVPN> {192.168.0.10, 192.168.0.11, 192.168.0.12}`
+    ```
     * Inbound rules (from my home network)
-    `pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto tcp from <HostsToRouteViaVPN> to any $TcpState $OpenSTO`
-    `pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto udp from <HostsToRouteViaVPN> to any $UdpState $OpenSTO`
-    `pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto icmp from <HostsToRouteViaVPN> to any $IcmpPing $UdpState $OpenSTO`
+    ```
+     pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto tcp from <HostsToRouteViaVPN> to any $TcpState $OpenSTO
+     pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto udp from <HostsToRouteViaVPN> to any $UdpState $OpenSTO
+     pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto icmp from <HostsToRouteViaVPN> to any $IcmpPing $UdpState $OpenSTO
+    ```
     * Outbound rules (from my firewall to the VPS)
     `pass out log on $VpnIf inet proto tcp from ($VpnIf) to <HostsToRouteViaVPN> $TcpState`
     `pass out log on $VpnIf inet proto udp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState`
@@ -91,7 +95,8 @@ Some useful notes though:
 * Bahrain runs a transparent proxy to filter web access. Unfortunately, this has a tendency to break some services that run over http. An example being linux package management tools (apt-get, yum).
   * Using the following rule I can make it appear that the squid proxy is available on my home network, in reality we are using the proxy service on the VPS and our traffic is being tunnelled over the VPN to the proxy. I can point my apt-cacher-ng server at this proxy and suddenly everything works again.
 
-  > rdr on $IntIf inet proto tcp from !$IntIf to $IntIf port $SquidPort -> $SquidServer
-  
-    * > $SquidPort = "3128"
-    * > $SquidServer = <the OpenVPN interface IP address on my VPS>
+```
+   $SquidPort = "3128"
+   $SquidServer = <the OpenVPN interface IP address on my VPS>
+   rdr on $IntIf inet proto tcp from !$IntIf to $IntIf port $SquidPort -> $SquidServer
+```
