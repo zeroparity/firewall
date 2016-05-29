@@ -45,55 +45,60 @@ Reviewing this setup today, it would seem to make more sense to virtualise the f
 
 ## ppp.conf
 
-* FreeBSD runs pppd in userland. This can bottleneck throughput on fast network connections.
-* Sadly my network is not fast enough to be bottlenecked by this (10Mb down / 2Mb up ADSL).
-* If I ever get a fast internet connection I will switch to MPD which runs in kernel mode. 
+FreeBSD runs pppd in userland. This can bottleneck throughput on fast network connections.
+Sadly my network is not fast enough to be bottlenecked by this (10Mb down / 2Mb up ADSL).
+If I ever get a fast internet connection I will switch to MPD which runs in kernel mode. 
 
-`default:`
-  `set log Phase TUN Command Warning`
-  `disable iface-alias`
-  `set timeout 0`
-  `set ifaddr 10.0.0.1/0 10.0.0.2/0 0.0.0.0 0.0.0.0`
+```
+default:
+  set log Phase TUN Command Warning
+  disable iface-alias
+  set timeout 0
+  set ifaddr 10.0.0.1/0 10.0.0.2/0 0.0.0.0 0.0.0.0
 
-`batelco_adsl:`
-  `set device PPPoE:em0`
-  `set speed sync`
-  `set mru 1492`
-  `set mtu 1492`
-  `set authname <username>`
-  `set authkey <password>`
-  `set dial`
-  `set login`
-  `add default HISADDR`
-
-  note that the "disable iface-alias" directive means that every time your connection receives a new IP address allocated to it, the old IP address won't be kept as an alias. It took me longer than it should have done to figure out what was going on until I added that line!
+batelco_adsl:
+  set device PPPoE:em0
+  set speed sync
+  set mru 1492
+  set mtu 1492
+  set authname <username>
+  set authkey <password>
+  set dial
+  set login
+  add default HISADDR
+```
+note that the "disable iface-alias" directive means that every time your connection receives a new IP address allocated to it, the old IP address won't be kept as an alias. It took me longer than it should have done to figure out what was going on until I added that line!
 
 ## pf.conf
 
 This is not my entire pf.conf. calomel.org provided the base of my configuration and they provide a way better explanation that I could.
 Some useful notes though:
 
-* I have a VPS with softlayer which runs OpenVPN, I have ipchains rules on the VPS machine to allow it to IP masquerade internet access to clients coming in over the VPN.
-* I have a few hosts in my home network that I want to route all traffic exiting my network over the VPN. This is useful for geographically restricted services such as Amazon FireTV, Amazon Echo etc.
-  * To do this in pf.conf
-    * Create a table with the addresses we want to route over the VPN 
-    ```
-      table <HostsToRouteViaVPN> {192.168.0.10, 192.168.0.11, 192.168.0.12}`
-    ```
-    * Inbound rules (from my home network)
-    ```
-     pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto tcp from <HostsToRouteViaVPN> to any $TcpState $OpenSTO
-     pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto udp from <HostsToRouteViaVPN> to any $UdpState $OpenSTO
-     pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto icmp from <HostsToRouteViaVPN> to any $IcmpPing $UdpState $OpenSTO
-    ```
-    * Outbound rules (from my firewall to the VPS)
-    `pass out log on $VpnIf inet proto tcp from ($VpnIf) to <HostsToRouteViaVPN> $TcpState`
-    `pass out log on $VpnIf inet proto udp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState`
-    `pass out log on $VpnIf inet proto icmp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState`
+I have a VPS with softlayer which runs OpenVPN, I have ipchains rules on the VPS machine to allow it to IP masquerade internet access to clients coming in over the VPN.
+I have a few hosts in my home network that I want to route all traffic exiting my network over the VPN. This is useful for geographically restricted services such as Amazon FireTV, Amazon Echo etc.
 
-* I also run a squid proxy on my VPS. It's locked down so it can be accessed only from the loopback and the OpenVPN interfaces.
-* Bahrain runs a transparent proxy to filter web access. Unfortunately, this has a tendency to break some services that run over http. An example being linux package management tools (apt-get, yum).
-  * Using the following rule I can make it appear that the squid proxy is available on my home network, in reality we are using the proxy service on the VPS and our traffic is being tunnelled over the VPN to the proxy. I can point my apt-cacher-ng server at this proxy and suddenly everything works again.
+To do this in pf.conf
+  * Create a table with the addresses we want to route over the VPN 
+  ```
+   table <HostsToRouteViaVPN> {192.168.0.10, 192.168.0.11, 192.168.0.12}
+  ```
+  * Inbound rules (from my home network)
+  ```
+   pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto tcp from <HostsToRouteViaVPN> to any $TcpState $OpenSTO
+   pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto udp from <HostsToRouteViaVPN> to any $UdpState $OpenSTO
+   pass in log on $IntIf route-to ($VpnIf $VpnGW) inet proto icmp from <HostsToRouteViaVPN> to any $IcmpPing $UdpState $OpenSTO
+  ```
+  * Outbound rules (from my firewall to the VPS)
+  ```
+  pass out log on $VpnIf inet proto tcp from ($VpnIf) to <HostsToRouteViaVPN> $TcpState
+  pass out log on $VpnIf inet proto udp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState
+  pass out log on $VpnIf inet proto icmp from ($VpnIf) to <HostsToRouteViaVPN> $UdpState
+  ```
+I also run a squid proxy on my VPS. It's locked down so it can be accessed only from the loopback and the OpenVPN interfaces.
+
+The Bahrain gov / ISPs run a transparent proxy to filter web access. Unfortunately, this has a tendency to break some services that run over http. An example being linux package management tools (apt-get, yum).
+
+Using the following rule I can make it appear that the squid proxy is available on my home network, in reality we are using the proxy service on the VPS and our traffic is being tunnelled over the VPN to the proxy. I can point my apt-cacher-ng server at this proxy and suddenly everything works again.
 
 ```
    $SquidPort = "3128"
