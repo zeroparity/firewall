@@ -90,6 +90,8 @@ Some useful notes though:
 * I also run a squid proxy on my VPS. It's locked down so it can be accessed only from the loopback and the OpenVPN interfaces.
 * Bahrain runs a transparent proxy to filter web access. Unfortunately, this has a tendency to break some services that run over http. An example being linux package management tools (apt-get, yum).
   * Using the following rule I can make it appear that the squid proxy is available on my home network, in reality we are using the proxy service on the VPS and our traffic is being tunnelled over the VPN to the proxy. I can point my apt-cacher-ng server at this proxy and suddenly everything works again.
-  rdr on $IntIf inet proto tcp from !$IntIf to $IntIf port $SquidPort -> $SquidServer
-    * `$SquidPort = "3128"`
-    * `$SquidServer = <the OpenVPN interface IP address on my VPS>`
+
+  > rdr on $IntIf inet proto tcp from !$IntIf to $IntIf port $SquidPort -> $SquidServer
+  
+    * > $SquidPort = "3128"
+    * > $SquidServer = <the OpenVPN interface IP address on my VPS>
